@@ -7,10 +7,11 @@ export default async function handler(
   res: NextApiResponse
 ) {
   const matriculas = await TiutionSModel.find({}).lean();
+  const data = matriculas.map((m: any) => ({ ...m, id: m._id?.toString() }));
 
   return res.status(200).json({
     message: "todas las matriculas",
-    data: matriculas as Array<Tuition>,
+    data: data as Array<Tuition>,
     success: true,
   });
 }
