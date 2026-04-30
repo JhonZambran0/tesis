@@ -4,6 +4,7 @@ import {
   Backup,
   CloudImage,
   Course,
+  Grade,
   Parallel,
   Period,
   Student,
@@ -81,6 +82,7 @@ export const TeachersModel =
 const MateriasSchema = new mongoose.Schema<Subject>({
   nombre: { type: String },
   estado: { type: String },
+  horario: { type: String },
   profesor: { type: [TeacherSchema] },
 });
 
@@ -380,3 +382,26 @@ AuditorySchema.set("toJSON", {
 
 export const AuditoryModel =
   mongoose.models.Auditory || mongoose.model("Auditory", AuditorySchema);
+
+//Calificaciones
+const GradeSchema = new mongoose.Schema<Grade>({
+  student: { type: StudentSchema },
+  subject: { type: MateriasSchema },
+  course: { type: CourseSchema },
+  grade: { type: Number },
+  bimestre: { type: String },
+  descripcion: { type: String },
+  period: { type: PeriodosSchema },
+  teacher: { type: TeacherSchema },
+}, { timestamps: true });
+
+GradeSchema.virtual("id").get(function () {
+  return this._id.toHexString();
+});
+
+GradeSchema.set("toJSON", {
+  virtuals: true,
+});
+
+export const GradeModel =
+  mongoose.models.Grades || mongoose.model("Grades", GradeSchema);

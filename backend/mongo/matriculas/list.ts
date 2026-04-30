@@ -6,7 +6,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const matriculas = await TiutionSModel.find({});
+  const matriculas = await TiutionSModel.find({}).lean();
 
   return res.status(200).json({
     message: "todas las matriculas",

@@ -98,6 +98,7 @@ export type Subject = {
   id?: string;
   nombre: string;
   estado: string;
+  horario?: string;
   profesor: Array<Teacher>;
 };
 
@@ -105,7 +106,10 @@ export type Grade = {
   id?: string;
   student: Student;
   subject: Subject;
+  course: Course;
   grade: number;
+  bimestre: string;
+  descripcion: string;
   period: Period;
   teacher: Teacher;
 };

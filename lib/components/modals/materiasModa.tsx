@@ -7,6 +7,7 @@ const initialSubjects: Subject = {
   id: null,
   nombre: "",
   estado: "",
+  horario: "",
   profesor: [],
 };
 
@@ -89,6 +90,19 @@ const MateriaModal = (props: Props) => {
                   <option value="Activo">Activo</option>
                   <option value="Inactivo">Inactivo</option>
                 </select>
+              </div>
+              <div>
+                <label className="text-gray-700 text-sm font-bold mb-2">
+                  Horario
+                </label>
+                <input
+                  className="appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+                  type="text"
+                  placeholder="Ej: 08:00 AM"
+                  name="horario"
+                  value={formik.values?.horario ?? ""}
+                  onChange={formik.handleChange}
+                />
               </div>
             </div>
             <hr />
