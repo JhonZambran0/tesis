@@ -456,7 +456,8 @@ export default function Home() {
                             {/* Encabezados de tabla */}
                             <div className="grid grid-cols-4 text-xs font-semibold text-gray-600 mb-1 px-1 gap-1">
                               <span>Estudiantes Matriculados</span>
-                              <span colSpan={2}>Calificaciones</span>
+                              <span>Calificaciones</span>
+                              <span></span>
                               <span></span>
                             </div>
                             {data.students.map((student: any) => {
