@@ -8,6 +8,9 @@ const nextConfig = {
   images: {
     domains: ["res.cloudinary.com", "firebasestorage.googleapis.com"],
   },
+  experimental: {
+    optimizePackageImports: ["devextreme-react"],
+  },
 };
 
 module.exports = nextConfig;
