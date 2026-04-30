@@ -58,17 +58,19 @@ export default function Home() {
   };
 
   // ---- Admin: buscar reporte 2 (por estudiante) ----
-  const buscarReporte2 = async (studentId: string, periodId: string) => {
-    if (!studentId) { setReport2Grades([]); return; }
+  const buscarReporte2 = async (studentId?: string, periodId?: string) => {
+    const sid = studentId ?? filterStudentReport;
+    const pid = periodId ?? filterPeriodReport;
+    if (!sid) { setReport2Grades([]); return; }
     setLoadingReport2(true);
     const gradesRes = await HttpClient("/api/grades", "GET", auth.userName, auth.role);
     if (gradesRes.success) {
       const grades = gradesRes.data ?? [];
       const filtered = grades.filter((g: any) => {
-        const matchStudent = g.student?._id === studentId || g.student?.id === studentId;
-        const matchPeriod = periodId
-          ? g.period?._id === periodId || g.period?.id === periodId
-          : true;
+        const gsid = (g.student?._id ?? g.student?.id ?? "").toString();
+        const gpid = (g.period?._id ?? g.period?.id ?? "").toString();
+        const matchStudent = gsid === sid.toString();
+        const matchPeriod = pid ? gpid === pid.toString() : true;
         return matchStudent && matchPeriod;
       });
       setReport2Grades(filtered);
@@ -335,10 +337,7 @@ export default function Home() {
                     <select
                       className="border rounded px-3 py-1 text-sm min-w-[220px]"
                       value={filterStudentReport}
-                      onChange={(e) => {
-                        setFilterStudentReport(e.target.value);
-                        buscarReporte2(e.target.value, filterPeriodReport);
-                      }}
+                      onChange={(e) => setFilterStudentReport(e.target.value)}
                     >
                       <option value="">Seleccionar...</option>
                       {allStudents.map((s) => (
@@ -353,10 +352,7 @@ export default function Home() {
                     <select
                       className="border rounded px-3 py-1 text-sm min-w-[220px]"
                       value={filterPeriodReport}
-                      onChange={(e) => {
-                        setFilterPeriodReport(e.target.value);
-                        if (filterStudentReport) buscarReporte2(filterStudentReport, e.target.value);
-                      }}
+                      onChange={(e) => setFilterPeriodReport(e.target.value)}
                     >
                       <option value="">Todos</option>
                       {allPeriods.map((p) => (
@@ -365,6 +361,16 @@ export default function Home() {
                         </option>
                       ))}
                     </select>
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      className="px-5 py-1 rounded text-white text-sm font-semibold"
+                      style={{ backgroundColor: "#4e73df" }}
+                      onClick={() => buscarReporte2()}
+                      disabled={loadingReport2 || !filterStudentReport}
+                    >
+                      {loadingReport2 ? "Cargando..." : "Buscar"}
+                    </button>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
