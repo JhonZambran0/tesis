@@ -29,24 +29,54 @@ export default function Home() {
   const [filterTeacher, setFilterTeacher] = useState("");
   const [filterStudentReport, setFilterStudentReport] = useState("");
   const [filterPeriodReport, setFilterPeriodReport] = useState("");
+  const [loadingReport1, setLoadingReport1] = useState(false);
+  const [loadingReport2, setLoadingReport2] = useState(false);
+  const [report1Searched, setReport1Searched] = useState(false);
+  const [report2Grades, setReport2Grades] = useState<any[]>([]);
 
-  // ---- Admin: cargar datos ----
+  // ---- Admin: cargar datos base (sin grades) ----
   const loadAdminData = async () => {
-    const [gradesRes, periodsRes, coursesRes, teachersRes, studentsRes] = await Promise.all([
-      HttpClient("/api/grades", "GET", auth.userName, auth.role),
+    const [periodsRes, coursesRes, teachersRes, studentsRes] = await Promise.all([
       HttpClient("/api/period", "GET", auth.userName, auth.role),
       HttpClient("/api/courses", "GET", auth.userName, auth.role),
       HttpClient("/api/teachers", "GET", auth.userName, auth.role),
       HttpClient("/api/students", "GET", auth.userName, auth.role),
     ]);
-    if (gradesRes.success) setAllGrades(gradesRes.data ?? []);
     if (periodsRes.success) setAllPeriods(periodsRes.data ?? []);
     if (coursesRes.success) setAllCourses(coursesRes.data ?? []);
     if (teachersRes.success) setAllTeachers(teachersRes.data ?? []);
     if (studentsRes.success) setAllStudents(studentsRes.data ?? []);
   };
 
-  // ---- Admin: filtros reporte 1 ----
+  // ---- Admin: buscar reporte 1 ----
+  const buscarReporte1 = async () => {
+    setLoadingReport1(true);
+    setReport1Searched(true);
+    const gradesRes = await HttpClient("/api/grades", "GET", auth.userName, auth.role);
+    if (gradesRes.success) setAllGrades(gradesRes.data ?? []);
+    setLoadingReport1(false);
+  };
+
+  // ---- Admin: buscar reporte 2 (por estudiante) ----
+  const buscarReporte2 = async (studentId: string, periodId: string) => {
+    if (!studentId) { setReport2Grades([]); return; }
+    setLoadingReport2(true);
+    const gradesRes = await HttpClient("/api/grades", "GET", auth.userName, auth.role);
+    if (gradesRes.success) {
+      const grades = gradesRes.data ?? [];
+      const filtered = grades.filter((g: any) => {
+        const matchStudent = g.student?._id === studentId || g.student?.id === studentId;
+        const matchPeriod = periodId
+          ? g.period?._id === periodId || g.period?.id === periodId
+          : true;
+        return matchStudent && matchPeriod;
+      });
+      setReport2Grades(filtered);
+    }
+    setLoadingReport2(false);
+  };
+
+  // ---- Admin: filtros reporte 1 (sobre grades ya cargados) ----
   const filteredGrades = allGrades.filter((g) => {
     const matchPeriod = filterPeriod
       ? g.period?._id === filterPeriod || g.period?.id === filterPeriod
@@ -58,17 +88,6 @@ export default function Home() {
       ? g.teacher?._id === filterTeacher || g.teacher?.id === filterTeacher
       : true;
     return matchPeriod && matchCourse && matchTeacher;
-  });
-
-  // ---- Admin: filtros reporte 2 ----
-  const filteredStudentGrades = allGrades.filter((g) => {
-    if (!filterStudentReport) return false;
-    const matchStudent =
-      g.student?._id === filterStudentReport || g.student?.id === filterStudentReport;
-    const matchPeriod = filterPeriodReport
-      ? g.period?._id === filterPeriodReport || g.period?.id === filterPeriodReport
-      : true;
-    return matchStudent && matchPeriod;
   });
 
   // ---- Docente: obtener calificación existente ----
@@ -255,9 +274,23 @@ export default function Home() {
                       ))}
                     </select>
                   </div>
+                  <div className="flex items-end">
+                    <button
+                      className="px-5 py-1 rounded text-white text-sm font-semibold"
+                      style={{ backgroundColor: "#4e73df" }}
+                      onClick={buscarReporte1}
+                      disabled={loadingReport1}
+                    >
+                      {loadingReport1 ? "Cargando..." : "Buscar"}
+                    </button>
+                  </div>
                 </div>
                 <div>
-                  {filteredGrades.length === 0 ? (
+                  {!report1Searched ? (
+                    <p className="text-gray-400 text-sm">Selecciona los filtros y presiona Buscar.</p>
+                  ) : loadingReport1 ? (
+                    <p className="text-gray-500 text-sm">Cargando calificaciones...</p>
+                  ) : filteredGrades.length === 0 ? (
                     <p className="text-gray-500 text-sm">No hay calificaciones registradas.</p>
                   ) : (
                     filteredGrades.map((g, i) => (
@@ -302,7 +335,10 @@ export default function Home() {
                     <select
                       className="border rounded px-3 py-1 text-sm min-w-[220px]"
                       value={filterStudentReport}
-                      onChange={(e) => setFilterStudentReport(e.target.value)}
+                      onChange={(e) => {
+                        setFilterStudentReport(e.target.value);
+                        buscarReporte2(e.target.value, filterPeriodReport);
+                      }}
                     >
                       <option value="">Seleccionar...</option>
                       {allStudents.map((s) => (
@@ -317,7 +353,10 @@ export default function Home() {
                     <select
                       className="border rounded px-3 py-1 text-sm min-w-[220px]"
                       value={filterPeriodReport}
-                      onChange={(e) => setFilterPeriodReport(e.target.value)}
+                      onChange={(e) => {
+                        setFilterPeriodReport(e.target.value);
+                        if (filterStudentReport) buscarReporte2(filterStudentReport, e.target.value);
+                      }}
                     >
                       <option value="">Todos</option>
                       {allPeriods.map((p) => (
@@ -329,12 +368,16 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  {!filterStudentReport ? null : filteredStudentGrades.length === 0 ? (
+                  {!filterStudentReport ? (
+                    <p className="text-gray-400 text-sm col-span-2">Selecciona un estudiante para ver sus calificaciones.</p>
+                  ) : loadingReport2 ? (
+                    <p className="text-gray-500 text-sm col-span-2">Cargando calificaciones...</p>
+                  ) : report2Grades.length === 0 ? (
                     <p className="text-gray-500 text-sm col-span-2">
                       No hay calificaciones para este estudiante.
                     </p>
                   ) : (
-                    filteredStudentGrades.map((g, i) => (
+                    report2Grades.map((g, i) => (
                       <div key={i} className="border rounded p-3">
                         <p className="font-bold">Materia: {g.subject?.nombre}</p>
                         <p>
