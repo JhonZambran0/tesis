@@ -42,10 +42,9 @@ const TeachersPage = () => {
   }, []);
 
   const showModal = () => setModalVisible(true);
-  const hideModal = async () => {
+  const hideModal = () => {
     if (editingTeacher != null) setEditingTeacher(null);
     setModalVisible(false);
-    await loadData();
   };
 
   const columns: ColumnData[] = [

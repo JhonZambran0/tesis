@@ -55,8 +55,8 @@ const CourseModal = (props: Props) => {
     validateOnBlur: true,
     validateOnChange: true,
     initialValues,
-    onSubmit: (formData: Course) => {
-      props.onDone(formData);
+    onSubmit: async (formData: Course) => {
+      await props.onDone(formData);
       handleClose();
     },
   });

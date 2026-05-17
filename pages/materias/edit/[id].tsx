@@ -40,6 +40,7 @@ const MateriaByTeachers = () => {
     if (response.success) {
       const materia = response.data;
       setInitialValues(response.data);
+      setItems(materia.profesor || []);
       console.log(materia);
     } else {
       toast.warning(response.message);

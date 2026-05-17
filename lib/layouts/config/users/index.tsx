@@ -39,10 +39,9 @@ const UsersPanel = () => {
   }, []);
 
   const showModal = () => setModalVisible(true);
-  const hideModal = async () => {
+  const hideModal = () => {
     if (editingUser != null) setEditingUser(null);
     setModalVisible(false);
-    await loadData();
   };
 
   const columns: ColumnData[] = [
@@ -148,6 +147,7 @@ const UsersPanel = () => {
             toast.success(
               editingUser == null ? "Usuario creado!" : "Usuario actualizado!"
             );
+            await loadData();
           } else {
             toast.warning(response.message);
           }

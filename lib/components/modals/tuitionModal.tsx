@@ -168,7 +168,7 @@ const TuitionModal = (props: Props) => {
         return;
       }
 
-      props.onDone(formData);
+      await props.onDone(formData);
       handleClose();
     },
   });

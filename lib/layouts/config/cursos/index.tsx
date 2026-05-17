@@ -39,10 +39,9 @@ const CursosPanel = () => {
   }, []);
 
   const showModal = () => setModalVisible(true);
-  const hideModal = async () => {
+  const hideModal = () => {
     if (editingCursos != null) setEditingCursos(null);
     setModalVisible(false);
-    await loadData();
   };
 
   const columns: ColumnData[] = [

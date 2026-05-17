@@ -34,9 +34,7 @@ const MateriaModal = (props: Props) => {
         toast.warning("El nombre no puede estar vacio");
         return;
       }
-      props.onDone(formData);
-
-      console.log(formData)
+      await props.onDone(formData);
       handleClose();
     },
   });

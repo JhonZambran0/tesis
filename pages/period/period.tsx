@@ -41,10 +41,9 @@ const PeriodPage = () => {
   }, []);
 
   const showModal = () => setModalVisible(true);
-  const hideModal = async () => {
+  const hideModal = () => {
     if (editingPeriod != null) setEditingPeriod(null);
     setModalVisible(false);
-    await loadData();
   };
 
   const columns: ColumnData[] = [

@@ -41,10 +41,9 @@ const TuitionPage = () => {
   }, []);
 
   const showModal = () => setModalVisible(true);
-  const hideModal = async () => {
+  const hideModal = () => {
     if (editingTuition != null) setEditingTuition(null);
     setModalVisible(false);
-    await loadData();
   };
 
   const columns: ColumnData[] = [

@@ -216,7 +216,7 @@ const TreeTable = ({
 
   const onSelectionChanged = (e: any) => {
     setSelectedRowsKeys(e.selectedRowKeys);
-    onSelectedRows(e.selectedRowsData);
+    onSelectedRows?.(e.selectedRowsData);
   };
 
   useEffect(() => setTableData(dataSource), [dataSource]);
@@ -235,9 +235,9 @@ const TreeTable = ({
         keyExpr={keyExpr}
         rowAlternationEnabled={true}
         style={style}
-        onRowRemoved={(e) => onRow.removed(e.data)}
-        onRowUpdated={(e) => onRow.updated(e.data)}
-        onRowInserted={(e) => onRow.inserted(e.data)}
+        onRowRemoved={(e) => onRow?.removed(e.data)}
+        onRowUpdated={(e) => onRow?.updated(e.data)}
+        onRowInserted={(e) => onRow?.inserted(e.data)}
         selectedRowKeys={selectedRowKeys}
         onSelectionChanged={onSelectionChanged}
       >

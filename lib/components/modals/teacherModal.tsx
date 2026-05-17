@@ -42,7 +42,7 @@ const TeacherModal = (props: Props) => {
         toast.warning("El nombre no puede estar vacio");
         return;
       }
-      props.onDone(formData);
+      await props.onDone(formData);
       handleClose();
     },
   });

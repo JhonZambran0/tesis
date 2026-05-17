@@ -42,10 +42,9 @@ const MateriasPanel = () => {
   }, []);
 
   const showModal = () => setModalVisible(true);
-  const hideModal = async () => {
+  const hideModal = () => {
     if (editingSubjects != null) setEditingSubjects(null);
     setModalVisible(false);
-    await loadData();
   };
 
   const showModal2 = () => setModalVisible2(true);

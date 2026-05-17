@@ -42,10 +42,9 @@ const ParalelosPanel = () => {
   }, []);
 
   const showModal = () => setModalVisible(true);
-  const hideModal = async () => {
+  const hideModal = () => {
     if (editingParallels != null) setEditingParallels(null);
     setModalVisible(false);
-    await loadData();
   };
 
   const columns: ColumnData[] = [
