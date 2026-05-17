@@ -60,7 +60,6 @@ const TeacherbySubjectModal = (props: Props) => {
     validateOnChange: true,
     initialValues,
     onSubmit: async (formData: Teacher) => {
-      props.onDone(formData);
       handleClose();
     },
   });

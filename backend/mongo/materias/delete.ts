@@ -9,23 +9,22 @@ export default async function handler(
   const id = req.query.id as string;
   const userName = req.headers.username as string;
   const resp = await MateriasModel.findByIdAndRemove(id);
-  //{ acknowledged: true, deletedCount: 1 }
+
+  if (resp === null)
+    return res.status(500).json({
+      message: "Materia no encontrada",
+      success: false,
+    });
 
   const auditory = new AuditoryModel({
     date: FormatedDate(),
     user: userName,
-    action: "Elimino una materia: " + resp.name,
+    action: "Elimino una materia: " + resp.nombre,
   });
   await auditory.save();
 
-  if (resp.deletedCount === 1)
-    return res.status(200).json({
-      message: "Eliminado!",
-      success: true,
-    });
-
-  return res.status(500).json({
-    message: "Error inesperado",
-    success: false,
+  return res.status(200).json({
+    message: "Eliminado!",
+    success: true,
   });
 }
