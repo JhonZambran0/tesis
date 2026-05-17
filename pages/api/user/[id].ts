@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "../../../backend/middlewares/mongo";
 import { UserModel } from "../../../backend/mongo/schemas";
+import remove from "../../../backend/mongo/user/delete";
 
 export default async function handler(
   req: NextApiRequest,
@@ -65,6 +66,10 @@ export default async function handler(
         success: false,
       });
     }
+  }
+
+  if (method === "DELETE") {
+    return await remove(req, res);
   }
 
   return res.status(405).json({

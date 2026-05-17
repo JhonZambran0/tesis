@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../../lib/hooks/use_auth";
 import HttpClient from "../../../lib/utils/http_client";
 import { toast } from "react-toastify";
-import Router from "next/router";
+import Router, { useRouter } from "next/router";
 import { Subject } from "../../../backend/types";
 import Sidebar from "../../../lib/components/sidebar";
 import LoadingContainer from "../../../lib/components/loading_container";
@@ -10,6 +10,7 @@ import TreeTable, { ColumnData } from "../../../lib/components/tree_table";
 
 const MateriaByTeachers = () => {
   const { auth } = useAuth();
+  const router = useRouter();
   const [loading, setLoading] = useState<boolean>(true);
 
   const [items, setItems] = useState<Array<Subject>>([]);
@@ -41,9 +42,9 @@ const MateriaByTeachers = () => {
 
   // ejecuta funcion al renderizar la vista
   useEffect(() => {
-    loadData();
+    if (router.isReady) loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [router.isReady]);
 
   const columns: ColumnData[] = [
     {

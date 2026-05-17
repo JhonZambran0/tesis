@@ -344,6 +344,7 @@ const UserSchema = new mongoose.Schema<User>(
     dateBirth: { type: String },
     age: { type: Number },
     dateAdmission: { type: String },
+    teacherId: { type: String },
   },
   { timestamps: true }
 );

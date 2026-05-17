@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../../hooks/use_auth";
 import theme from "../../styles/theme";
 import { User, ModalProps } from "../../../backend/types";
+import HttpClient from "../../utils/http_client";
 
 const initialUser: User = {
   id: null,
@@ -16,6 +17,7 @@ const initialUser: User = {
   dateBirth: "",
   age: 0,
   dateAdmission: "",
+  teacherId: "",
 };
 
 interface Props extends ModalProps<User> {
@@ -26,6 +28,14 @@ const UserModal = (props: Props) => {
   const { auth } = useAuth();
   const [loading, setLoading] = useState<boolean>(false);
   const [initialValues, setInitialValues] = useState<User>(initialUser);
+  const [teachers, setTeachers] = useState<any[]>([]);
+
+  useEffect(() => {
+    HttpClient("/api/teachers", "GET", auth?.userName, auth?.role).then((res) => {
+      if (res.success) setTeachers(res.data ?? []);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleClose = () => {
     formik.resetForm({ values: initialUser });
@@ -216,12 +226,31 @@ const UserModal = (props: Props) => {
                   value={formik.values.role}
                   defaultValue={1}
                 >
-                  <option value={1}>1</option>
-                  <option value={2}>2</option>
-                  <option value={3}>3</option>
-                  <option value={4}>4</option>
+                  <option value={1}>Secretaria</option>
+                  <option value={2}>Docente</option>
                 </select>
               </div>
+
+              {Number(formik.values.role) === 2 && (
+                <div>
+                  <label className="text-gray-700 text-sm font-bold mb-2">
+                    Docente vinculado
+                  </label>
+                  <select
+                    className="border border-gray-300 text-gray-900 text-sm rounded focus:ring-blue-500 focus:border-blue-500 block w-full py-2 px-4"
+                    name="teacherId"
+                    onChange={formik.handleChange}
+                    value={formik.values.teacherId ?? ""}
+                  >
+                    <option value="">-- Seleccionar docente --</option>
+                    {teachers.map((t: any) => (
+                      <option key={t.id ?? t._id} value={t.id ?? t._id}>
+                        {t.nombre} {t.apellido}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
             <hr />
             <button

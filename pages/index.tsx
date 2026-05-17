@@ -24,6 +24,7 @@ export default function Home() {
   const [allCourses, setAllCourses] = useState<any[]>([]);
   const [allTeachers, setAllTeachers] = useState<any[]>([]);
   const [allStudents, setAllStudents] = useState<any[]>([]);
+  const [allTuitions, setAllTuitions] = useState<any[]>([]);
   const [filterPeriod, setFilterPeriod] = useState("");
   const [filterCourse, setFilterCourse] = useState("");
   const [filterTeacher, setFilterTeacher] = useState("");
@@ -36,17 +37,39 @@ export default function Home() {
 
   // ---- Admin: cargar datos base (sin grades) ----
   const loadAdminData = async () => {
-    const [periodsRes, coursesRes, teachersRes, studentsRes] = await Promise.all([
+    const [periodsRes, coursesRes, teachersRes, studentsRes, tuitionsRes] = await Promise.all([
       HttpClient("/api/period", "GET", auth.userName, auth.role),
       HttpClient("/api/courses", "GET", auth.userName, auth.role),
       HttpClient("/api/teachers", "GET", auth.userName, auth.role),
       HttpClient("/api/students", "GET", auth.userName, auth.role),
+      HttpClient("/api/tuition", "GET", auth.userName, auth.role),
     ]);
     if (periodsRes.success) setAllPeriods(periodsRes.data ?? []);
     if (coursesRes.success) setAllCourses(coursesRes.data ?? []);
     if (teachersRes.success) setAllTeachers(teachersRes.data ?? []);
     if (studentsRes.success) setAllStudents(studentsRes.data ?? []);
+    if (tuitionsRes.success) setAllTuitions(tuitionsRes.data ?? []);
   };
+
+  // ---- Admin: estudiantes del período seleccionado ----
+  const studentsForPeriod = filterPeriodReport
+    ? (() => {
+        const seen = new Set<string>();
+        const result: any[] = [];
+        allTuitions.forEach((t) => {
+          const pid = (t.period?._id ?? t.period?.id ?? "").toString();
+          if (pid !== filterPeriodReport) return;
+          const s = t.student;
+          if (!s) return;
+          const sid = (s._id ?? s.id ?? "").toString();
+          if (!seen.has(sid)) {
+            seen.add(sid);
+            result.push(s);
+          }
+        });
+        return result;
+      })()
+    : [];
 
   // ---- Admin: buscar reporte 1 ----
   const buscarReporte1 = async () => {
@@ -92,15 +115,15 @@ export default function Home() {
     return matchPeriod && matchCourse && matchTeacher;
   });
 
-  // ---- Docente: obtener calificación existente ----
-  const getTeacherGrade = (studentId: string, subjectId: string, bimestre: string) => {
-    const g = teacherGrades.find(
+  // ---- Docente: obtener todas las calificaciones de un estudiante en una materia ----
+  const getTeacherGrades = (studentId: string, subjectId: string) => {
+    return teacherGrades.filter(
       (gr) =>
-        (gr.student?._id === studentId || gr.student?.id === studentId) &&
-        (gr.subject?._id === subjectId || gr.subject?.id === subjectId) &&
-        gr.bimestre === bimestre
+        (gr.student?._id?.toString() === studentId?.toString() ||
+          gr.student?.id?.toString() === studentId?.toString()) &&
+        (gr.subject?._id?.toString() === subjectId?.toString() ||
+          gr.subject?.id?.toString() === subjectId?.toString())
     );
-    return g ? g.grade : "";
   };
 
   // ---- Docente: abrir modal ----
@@ -138,25 +161,36 @@ export default function Home() {
 
   // ---- Docente: cargar datos ----
   const loadData = async () => {
-    const userDataString = localStorage.getItem("userData");
-    let teacherEmail: string | null = null;
-    if (userDataString) {
-      const userData = JSON.parse(userDataString);
-      teacherEmail = userData.email;
-    }
-    if (!teacherEmail) return;
+    const teacherId = auth?.teacherId;
+    if (!teacherId) return;
 
-    const [teachersRes, tuitionRes, gradesRes] = await Promise.all([
+    const [teachersRes, tuitionRes, gradesRes, materiasRes] = await Promise.all([
       HttpClient("/api/teachers", "GET", auth.userName, auth.role),
       HttpClient("/api/tuition", "GET", auth.userName, auth.role),
       HttpClient("/api/grades", "GET", auth.userName, auth.role),
+      HttpClient("/api/materias", "GET", auth.userName, auth.role),
     ]);
 
+    // Find the teacher object by linked ID
     let teacherObj = null;
     if (teachersRes.success) {
       teacherObj =
-        (teachersRes.data ?? []).find((t: any) => t.email === teacherEmail) ?? null;
+        (teachersRes.data ?? []).find(
+          (t: any) => (t.id ?? t._id)?.toString() === teacherId
+        ) ?? null;
     }
+
+    // Find all materias where this teacher is assigned as professor (by ID)
+    const myMaterias: any[] = materiasRes.success
+      ? (materiasRes.data ?? []).filter((m: any) =>
+          (m.profesor ?? []).some(
+            (p: any) => (p.id ?? p._id)?.toString() === teacherId
+          )
+        )
+      : [];
+    const myMateriaIds = new Set(
+      myMaterias.map((m: any) => (m._id ?? m.id)?.toString())
+    );
 
     if (gradesRes.success) setTeacherGrades(gradesRes.data ?? []);
 
@@ -165,6 +199,13 @@ export default function Home() {
       (tuitionRes.data ?? []).forEach((tuition: any) => {
         const { course, period, parallel } = tuition;
         if (!course || !period || !parallel) return;
+
+        // Match subjects in this tuition's course to the teacher's materias by ID
+        const teacherSubjectsInCourse = (course.subjects ?? []).filter((s: any) =>
+          myMateriaIds.has((s._id ?? s.id)?.toString())
+        );
+        if (teacherSubjectsInCourse.length === 0) return;
+
         const key = `${course._id}-${period._id}-${parallel._id}`;
         if (!groupedData[key]) {
           groupedData[key] = {
@@ -174,20 +215,25 @@ export default function Home() {
             periodName: period.nombre,
             parallelName: parallel.name,
             students: [],
-            subjects: course.subjects.filter((subject: any) =>
-              subject.profesor.some((prof: any) => prof.email === teacherEmail)
-            ),
+            // Use live materia data so profesor/horario/estado are up to date
+            subjects: teacherSubjectsInCourse.map((s: any) => {
+              const live = myMaterias.find(
+                (m: any) =>
+                  (m._id ?? m.id)?.toString() === (s._id ?? s.id)?.toString()
+              );
+              return live ?? s;
+            }),
             teacherObj,
           };
         }
         if (tuition.student && tuition.student.nombre) {
           const already = groupedData[key].students.some(
-            (s: any) => s._id === tuition.student._id
+            (st: any) => st._id === tuition.student._id
           );
           if (!already) groupedData[key].students.push(tuition.student);
         }
       });
-      setConsolidatedData(Object.values(groupedData));
+      setConsolidatedData(Object.values(groupedData) as any[]);
     }
   };
 
@@ -333,31 +379,38 @@ export default function Home() {
                 <h2 className="text-xl font-bold mb-4">Reporte de académico por estudiante</h2>
                 <div className="flex flex-wrap gap-4 mb-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Estudiante:</label>
+                    <label className="block text-sm font-medium mb-1">Periodo:</label>
                     <select
                       className="border rounded px-3 py-1 text-sm min-w-[220px]"
-                      value={filterStudentReport}
-                      onChange={(e) => setFilterStudentReport(e.target.value)}
+                      value={filterPeriodReport}
+                      onChange={(e) => {
+                        setFilterPeriodReport(e.target.value);
+                        setFilterStudentReport("");
+                        setReport2Grades([]);
+                      }}
                     >
-                      <option value="">Seleccionar...</option>
-                      {allStudents.map((s) => (
-                        <option key={s._id || s.id} value={s._id || s.id}>
-                          {s.nombre} {s.apellido}
+                      <option value="">Seleccionar período...</option>
+                      {allPeriods.map((p) => (
+                        <option key={p._id || p.id} value={p._id || p.id}>
+                          {p.nombre}
                         </option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Periodo:</label>
+                    <label className="block text-sm font-medium mb-1">Estudiante:</label>
                     <select
                       className="border rounded px-3 py-1 text-sm min-w-[220px]"
-                      value={filterPeriodReport}
-                      onChange={(e) => setFilterPeriodReport(e.target.value)}
+                      value={filterStudentReport}
+                      onChange={(e) => setFilterStudentReport(e.target.value)}
+                      disabled={!filterPeriodReport}
                     >
-                      <option value="">Todos</option>
-                      {allPeriods.map((p) => (
-                        <option key={p._id || p.id} value={p._id || p.id}>
-                          {p.nombre}
+                      <option value="">
+                        {filterPeriodReport ? "Seleccionar estudiante..." : "Primero selecciona un período"}
+                      </option>
+                      {studentsForPeriod.map((s) => (
+                        <option key={s._id || s.id} value={s._id || s.id}>
+                          {s.nombre} {s.apellido}
                         </option>
                       ))}
                     </select>
@@ -502,55 +555,72 @@ export default function Home() {
                                 <span className="text-sm text-gray-500">Horario:</span>
                               )}
                             </div>
-                            {/* Encabezados de tabla */}
-                            <div className="grid grid-cols-4 text-xs font-semibold text-gray-600 mb-1 px-1 gap-1">
-                              <span>Estudiantes Matriculados</span>
-                              <span>Calificaciones</span>
-                              <span></span>
-                              <span></span>
+                            {/* Encabezado */}
+                            <div className="text-xs font-semibold text-gray-500 mb-1 px-1">
+                              Estudiantes matriculados y sus calificaciones:
                             </div>
                             {data.students.map((student: any) => {
-                              const p1 = getTeacherGrade(
+                              const studentGrades = getTeacherGrades(
                                 student._id,
-                                subject._id,
-                                "Primer Bimestre"
-                              );
-                              const p2 = getTeacherGrade(
-                                student._id,
-                                subject._id,
-                                "Segundo Bimestre"
+                                subject._id
                               );
                               return (
                                 <div
                                   key={student._id}
-                                  className="flex items-center bg-white rounded px-2 py-2 mb-1 border text-xs gap-2"
+                                  className="bg-white rounded border mb-2 text-xs overflow-hidden"
                                 >
-                                  <span className="flex-1 font-medium text-blue-600 truncate min-w-0">
-                                    {student.nombre} {student.apellido}
-                                  </span>
-                                  <span className="whitespace-nowrap text-gray-600">
-                                    Primer bimestre:{" "}
-                                    <strong>{p1 !== "" ? p1 : ""}</strong>
-                                  </span>
-                                  <span className="whitespace-nowrap text-gray-600">
-                                    Segundo bimestre:{" "}
-                                    <strong>{p2 !== "" ? p2 : ""}</strong>
-                                  </span>
-                                  <button
-                                    className="text-white rounded px-2 py-1 whitespace-nowrap text-xs shrink-0"
-                                    style={{ backgroundColor: "#4e73df" }}
-                                    onClick={() =>
-                                      openModal(
-                                        student,
-                                        subject,
-                                        data.courseObj,
-                                        data.periodObj,
-                                        data.teacherObj
-                                      )
-                                    }
-                                  >
-                                    Registrar calificación
-                                  </button>
+                                  {/* Fila del estudiante */}
+                                  <div className="flex items-center px-2 py-2 gap-2">
+                                    <span className="flex-1 font-semibold text-blue-700 truncate min-w-0">
+                                      {student.nombre} {student.apellido}
+                                    </span>
+                                    <button
+                                      className="text-white rounded px-2 py-1 whitespace-nowrap text-xs shrink-0"
+                                      style={{ backgroundColor: "#4e73df" }}
+                                      onClick={() =>
+                                        openModal(
+                                          student,
+                                          subject,
+                                          data.courseObj,
+                                          data.periodObj,
+                                          data.teacherObj
+                                        )
+                                      }
+                                    >
+                                      + Registrar nota
+                                    </button>
+                                  </div>
+                                  {/* Notas registradas */}
+                                  {studentGrades.length > 0 ? (
+                                    <div className="border-t bg-slate-50 px-2 py-1">
+                                      <table className="w-full text-xs">
+                                        <thead>
+                                          <tr className="text-gray-500">
+                                            <th className="text-left py-1 pr-2">Descripción</th>
+                                            <th className="text-left py-1 pr-2">Bimestre</th>
+                                            <th className="text-center py-1">Nota</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {studentGrades.map((g: any, gi: number) => (
+                                            <tr key={gi} className="border-t">
+                                              <td className="py-1 pr-2 text-gray-700">{g.descripcion || "—"}</td>
+                                              <td className="py-1 pr-2 text-gray-700">{g.bimestre}</td>
+                                              <td className="py-1 text-center font-bold"
+                                                style={{ color: g.grade >= 7 ? "#16a34a" : "#dc2626" }}
+                                              >
+                                                {g.grade}
+                                              </td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  ) : (
+                                    <div className="border-t bg-slate-50 px-2 py-1 text-gray-400 italic">
+                                      Sin calificaciones registradas
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })}

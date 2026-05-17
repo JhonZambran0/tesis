@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../../lib/hooks/use_auth";
 import HttpClient from "../../../lib/utils/http_client";
 import { toast } from "react-toastify";
-import Router from "next/router";
+import Router, { useRouter } from "next/router";
 import {
   ResponseData,
   Subject,
@@ -16,6 +16,7 @@ import { useFormik } from "formik";
 
 const MateriaByTeachers = () => {
   const { auth } = useAuth();
+  const router = useRouter();
   const [loading, setLoading] = useState<boolean>(true);
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [editingmateriasData, setEditingmateriasData] =
@@ -50,9 +51,9 @@ const MateriaByTeachers = () => {
 
   // ejecuta funcion al renderizar la vista
   useEffect(() => {
-    loadData();
+    if (router.isReady) loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [router.isReady]);
 
   const showModal = () => setModalVisible(true);
   const hideModal = () => setModalVisible(false);
@@ -60,11 +61,8 @@ const MateriaByTeachers = () => {
   const columns: ColumnData[] = [
     {
       dataField: "nombre",
-      caption: "Nombre del profesor",
-    },
-    {
-      dataField: "apellido",
-      caption: "Apeliido del profesor",
+      caption: "Nombre completo del profesor",
+      cellRender: ({ data }: any) => `${data.nombre} ${data.apellido}`,
     },
   ];
 
@@ -146,6 +144,13 @@ const MateriaByTeachers = () => {
                   infoText={(actual, total, items) =>
                     `Página ${actual} de ${total} (${items} profesores)`
                   }
+                  buttons={{
+                    delete: (teacher: Teacher) => {
+                      setItems((oldData) =>
+                        oldData.filter((t: Teacher) => t.id !== teacher.id)
+                      );
+                    },
+                  }}
                 />
                 <div className="mt-4">
                   <button

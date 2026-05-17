@@ -32,6 +32,7 @@ export type User = {
   dateBirth: string;
   age: number;
   dateAdmission: string;
+  teacherId?: string;
 };
 
 export type CloudImage = {

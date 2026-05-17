@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { Subject } from "../../types";
 import FormatedDate from "../../../lib/utils/formated_date";
-import { AuditoryModel, MateriasModel } from "../schemas";
+import { AuditoryModel, CourseSModel, MateriasModel, TiutionSModel } from "../schemas";
 
 export default async function handler(
   req: NextApiRequest,
@@ -11,10 +11,24 @@ export default async function handler(
   const userName = req.headers.username as string;
 
   const resp = await MateriasModel.findOneAndUpdate(
-    {
-      _id: materia.id,
-    },
+    { _id: materia.id },
     materia
+  );
+
+  // Keep embedded subjects in Cursos and Matriculas in sync
+  const subjectUpdate = {
+    "subjects.$.nombre": materia.nombre,
+    "subjects.$.estado": materia.estado,
+    "subjects.$.horario": materia.horario,
+    "subjects.$.profesor": materia.profesor,
+  };
+  await CourseSModel.updateMany(
+    { "subjects._id": materia.id },
+    { $set: subjectUpdate }
+  );
+  await TiutionSModel.updateMany(
+    { "course.subjects._id": materia.id },
+    { $set: { "course.subjects.$.profesor": materia.profesor } }
   );
 
   const auditory = new AuditoryModel({
