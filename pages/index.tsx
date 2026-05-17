@@ -104,13 +104,13 @@ export default function Home() {
   // ---- Admin: filtros reporte 1 (sobre grades ya cargados) ----
   const filteredGrades = allGrades.filter((g) => {
     const matchPeriod = filterPeriod
-      ? g.period?._id === filterPeriod || g.period?.id === filterPeriod
+      ? (g.period?._id ?? g.period?.id ?? "").toString() === filterPeriod
       : true;
     const matchCourse = filterCourse
-      ? g.course?._id === filterCourse || g.course?.id === filterCourse
+      ? (g.course?._id ?? g.course?.id ?? "").toString() === filterCourse
       : true;
     const matchTeacher = filterTeacher
-      ? g.teacher?._id === filterTeacher || g.teacher?.id === filterTeacher
+      ? (g.teacher?._id ?? g.teacher?.id ?? "").toString() === filterTeacher
       : true;
     return matchPeriod && matchCourse && matchTeacher;
   });
@@ -286,7 +286,7 @@ export default function Home() {
                     >
                       <option value="">Todos</option>
                       {allPeriods.map((p) => (
-                        <option key={p._id || p.id} value={p._id || p.id}>
+                        <option key={p._id || p.id} value={(p._id ?? p.id ?? "").toString()}>
                           {p.nombre}
                         </option>
                       ))}
@@ -301,7 +301,7 @@ export default function Home() {
                     >
                       <option value="">Todos</option>
                       {allCourses.map((c) => (
-                        <option key={c._id || c.id} value={c._id || c.id}>
+                        <option key={c._id || c.id} value={(c._id ?? c.id ?? "").toString()}>
                           {c.name}
                         </option>
                       ))}
@@ -316,7 +316,7 @@ export default function Home() {
                     >
                       <option value="">Todos</option>
                       {allTeachers.map((t) => (
-                        <option key={t._id || t.id} value={t._id || t.id}>
+                        <option key={t._id || t.id} value={(t._id ?? t.id ?? "").toString()}>
                           {t.nombre} {t.apellido}
                         </option>
                       ))}
